@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import logging
 
-from onetl.base import BaseFileLimit, PathProtocol
+from onetl.base import BaseFileLimit, PathWithStatsProtocol
 from onetl.impl import FrozenModel
 from onetl.log import log_with_indent
 
@@ -33,6 +33,10 @@ class FileLimit(BaseFileLimit, FrozenModel):
 
         Number of downloaded files at a time.
 
+    size_limit : int, default = 0
+
+        Total size of downloaded files at a time. Infinity by default.
+
     Examples
     --------
 
@@ -47,13 +51,16 @@ class FileLimit(BaseFileLimit, FrozenModel):
     """
 
     count_limit: int = 100
+    size_limit: int = 0
 
     _counter: int = 0
+    _size: int = 0
 
     def reset(self):
         self._counter = 0
+        self._size = 0
 
-    def stops_at(self, path: PathProtocol) -> bool:
+    def stops_at(self, path: PathWithStatsProtocol) -> bool:
         if self.is_reached:
             return True
 
@@ -62,10 +69,13 @@ class FileLimit(BaseFileLimit, FrozenModel):
 
         # directories count does not matter
         self._counter += 1
+        self._size += path.stat().st_size
         return self.is_reached
 
     @property
     def is_reached(self) -> bool:
+        if self.size_limit and self._size >= self.size_limit:
+            return True
         return self._counter >= self.count_limit
 
     def log_options(self, indent: int = 0):

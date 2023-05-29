@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from onetl.base.path_protocol import PathProtocol
+from onetl.base.path_protocol import PathWithStatsProtocol
 
 
 class BaseFileLimit(ABC):
@@ -31,7 +31,7 @@ class BaseFileLimit(ABC):
         """
 
     @abstractmethod
-    def stops_at(self, path: PathProtocol) -> bool:
+    def stops_at(self, path: PathWithStatsProtocol) -> bool:
         """
         Update internal state and check if it is reached. Returns ``True`` if limit is reached
         """
