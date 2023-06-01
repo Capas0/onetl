@@ -85,7 +85,7 @@ def test_downloader_run(
         assert not local_file.is_dir()
 
         remote_file_path = source_path / local_file.relative_to(local_path)
-        remote_file = file_all_connections.resolve_file(remote_file_path)
+        remote_file = file_all_connections.get_file(remote_file_path)
 
         # file size is same as expected
         assert local_file.stat().st_size == file_all_connections.get_stat(remote_file).st_size
@@ -221,6 +221,11 @@ def test_downloader_file_filter_glob(file_all_connections, source_path, upload_t
     )
 
 
+@pytest.mark.parametrize(
+    "source_path_value",
+    [None, lazy_fixture("source_path")],
+    ids=["Without source_path", "With source path"],
+)
 def test_downloader_file_filter_is_ignored_by_user_input(
     file_all_connections,
     source_path,
@@ -244,11 +249,6 @@ def test_downloader_file_filter_is_ignored_by_user_input(
     )
 
 
-@pytest.mark.parametrize(
-    "source_path_value",
-    [None, lazy_fixture("source_path")],
-    ids=["Without source_path", "With source path"],
-)
 def test_downloader_run_with_files_absolute(
     file_all_connections,
     source_path,
@@ -296,7 +296,7 @@ def test_downloader_run_with_files_absolute(
         assert local_file.is_file()
         assert not local_file.is_dir()
 
-        remote_file = file_all_connections.resolve_file(remote_file_path)
+        remote_file = file_all_connections.get_file(remote_file_path)
 
         # file size is same as expected
         assert local_file.stat().st_size == file_all_connections.get_stat(remote_file).st_size
@@ -337,7 +337,7 @@ def test_downloader_run_with_files_relative_and_source_path(
         assert local_file.is_file()
         assert not local_file.is_dir()
 
-        remote_file = file_all_connections.resolve_file(remote_file_path)
+        remote_file = file_all_connections.get_file(remote_file_path)
 
         # file size is same as expected
         assert local_file.stat().st_size == file_all_connections.get_stat(remote_file).st_size
@@ -389,12 +389,12 @@ def test_downloader_run_with_empty_files_input(
 def test_downloader_run_with_empty_source_path(request, file_all_connections, tmp_path_factory):
     source_path = PurePosixPath(f"/tmp/test_upload_{secrets.token_hex(5)}")
 
-    file_all_connections.create_dir(source_path)
+    file_all_connections.mkdir(source_path)
     if file_all_connections.path_exists(source_path):
         # S3 does not support creating directories
 
         def finalizer():
-            file_all_connections.remove_dir(source_path, recursive=True)
+            file_all_connections.rmdir(source_path, recursive=True)
 
         request.addfinalizer(finalizer)
 
@@ -593,7 +593,7 @@ def test_downloader_mode_overwrite(file_all_connections, source_path, upload_tes
         assert local_file.is_file()
         assert not local_file.is_dir()
 
-        remote_file = file_all_connections.resolve_file(remote_file_path)
+        remote_file = file_all_connections.get_file(remote_file_path)
 
         # file size was changed
         assert local_file.stat().st_size != local_files_stat[local_file].st_size
@@ -648,12 +648,12 @@ def test_downloader_run_missing_file(request, file_all_connections, upload_test_
     local_path = tmp_path_factory.mktemp("local_path")
     target_path = PurePosixPath(f"/tmp/test_upload_{secrets.token_hex(5)}")
 
-    file_all_connections.create_dir(target_path)
+    file_all_connections.mkdir(target_path)
     if file_all_connections.path_exists(target_path):
         # S3 does not support creating directories
 
         def finalizer():
-            file_all_connections.remove_dir(target_path, recursive=True)
+            file_all_connections.rmdir(target_path, recursive=True)
 
         request.addfinalizer(finalizer)
 
@@ -719,10 +719,10 @@ def test_downloader_source_path_not_a_directory(request, file_all_connections, t
 
 def test_downloader_local_path_not_a_directory(request, file_all_connections):
     source_path = PurePosixPath(f"/tmp/test_upload_{secrets.token_hex(5)}")
-    file_all_connections.create_dir(source_path)
+    file_all_connections.mkdir(source_path)
 
     def finalizer():
-        file_all_connections.remove_dir(source_path)
+        file_all_connections.rmdir(source_path)
 
     request.addfinalizer(finalizer)
 
@@ -743,13 +743,13 @@ def test_downloader_run_input_is_not_file(request, file_all_connections, tmp_pat
     source_path = PurePosixPath(f"/tmp/test_upload_{secrets.token_hex(5)}")
     not_a_file = source_path / "not_a_file"
 
-    file_all_connections.create_dir(not_a_file)
+    file_all_connections.mkdir(not_a_file)
 
     if file_all_connections.path_exists(not_a_file):
         # S3 does not support creating directories
 
         def finalizer():
-            file_all_connections.remove_dir(source_path, recursive=True)
+            file_all_connections.rmdir(source_path, recursive=True)
 
         request.addfinalizer(finalizer)
 
@@ -763,6 +763,42 @@ def test_downloader_run_input_is_not_file(request, file_all_connections, tmp_pat
 
 
 def test_downloader_file_limit_custom(file_all_connections, source_path, upload_test_files, tmp_path_factory, caplog):
+    count_limit = 3
+    size_limit = 4 * 1024
+    local_path = tmp_path_factory.mktemp("local_path")
+
+    downloader = FileDownloader(
+        connection=file_all_connections,
+        source_path=source_path,
+        local_path=local_path,
+        limit=FileLimit(count_limit=count_limit, size_limit=size_limit),
+    )
+
+    with caplog.at_level(logging.DEBUG):
+        files = downloader.view_files()
+
+        assert f"Limits [FileLimit(count_limit={count_limit}, size_limit={size_limit})] are reached" in caplog.text
+
+    assert len(files) <= count_limit
+    assert files.total_size <= size_limit
+
+    with caplog.at_level(logging.DEBUG):
+        download_result = downloader.run()
+        assert f"    count_limit = {count_limit}" in caplog.text
+        assert f"    size_limit = {size_limit}" in caplog.text
+        assert f"Limits [FileLimit(count_limit={count_limit}, size_limit={size_limit})] are reached" in caplog.text
+
+    assert len(download_result.successful) <= count_limit
+    assert download_result.total_size <= size_limit
+
+
+def test_downloader_file_count_limit_custom(
+    file_all_connections,
+    source_path,
+    upload_test_files,
+    tmp_path_factory,
+    caplog,
+):
     limit = 2
     local_path = tmp_path_factory.mktemp("local_path")
 
@@ -776,16 +812,44 @@ def test_downloader_file_limit_custom(file_all_connections, source_path, upload_
     with caplog.at_level(logging.DEBUG):
         files = downloader.view_files()
 
-        assert f"Limits [FileLimit(count_limit={limit}, size_limit=0)] are reached" in caplog.text
+        assert f"Limits [FileLimit(count_limit={limit}" in caplog.text
+        assert "are reached" in caplog.text
 
     assert len(files) == limit
 
     with caplog.at_level(logging.DEBUG):
         download_result = downloader.run()
-        assert "    count_limit = 2" in caplog.text
-        assert f"Limits [FileLimit(count_limit={limit}, size_limit=0)] are reached" in caplog.text
+        assert f"    count_limit = {limit}" in caplog.text
+        assert f"Limits [FileLimit(count_limit={limit}" in caplog.text
+        assert "are reached" in caplog.text
 
     assert len(download_result.successful) == limit
+
+
+def test_file_filter_size_limit_custom(file_all_connections, source_path, upload_test_files, tmp_path_factory, caplog):
+    size_limit = 4 * 1024  # 4KB
+    local_path = tmp_path_factory.mktemp("local_path")
+
+    downloader = FileDownloader(
+        connection=file_all_connections,
+        source_path=source_path,
+        local_path=local_path,
+        limit=FileLimit(size_limit=size_limit),
+    )
+
+    with caplog.at_level(logging.DEBUG):
+        files = downloader.view_files()
+
+        assert "are reached" in caplog.text
+
+    assert files.total_size <= size_limit
+
+    with caplog.at_level(logging.DEBUG):
+        download_result = downloader.run()
+        assert f"    size_limit = {size_limit}" in caplog.text
+        assert "are reached" in caplog.text
+
+    assert download_result.successful.total_size <= size_limit
 
 
 def test_downloader_no_file_limit(file_all_connections, source_path, upload_test_files, tmp_path_factory, caplog):
@@ -817,7 +881,7 @@ def test_downloader_no_file_limit(file_all_connections, source_path, upload_test
     )
 
 
-def test_downloader_file_limit_is_ignored_by_user_input(
+def test_downloader_file_count_limit_is_ignored_by_user_input(
     file_all_connections,
     source_path,
     upload_test_files,
@@ -829,7 +893,7 @@ def test_downloader_file_limit_is_ignored_by_user_input(
         connection=file_all_connections,
         source_path=source_path,
         local_path=local_path,
-        limit=FileLimit(count_limit=2),
+        limit=FileLimit(count_limit=2, size_limit=2 * 1024),
     )
 
     download_result = downloader.run(upload_test_files)
@@ -838,7 +902,12 @@ def test_downloader_file_limit_is_ignored_by_user_input(
     assert len(download_result.successful) == len(upload_test_files)
 
 
-def test_downloader_limit_applied_after_filter(file_all_connections, source_path, upload_test_files, tmp_path_factory):
+def test_downloader_file_count_limit_applied_after_filter(
+    file_all_connections,
+    source_path,
+    upload_test_files,
+    tmp_path_factory,
+):
     local_path = tmp_path_factory.mktemp("local_path")
 
     downloader = FileDownloader(
@@ -871,6 +940,47 @@ def test_downloader_limit_applied_after_filter(file_all_connections, source_path
     # limit should be applied to files which satisfy the filter, not to all files in the source_path
     assert download_result.successful.issubset(filtered)
     assert len(download_result.successful) == 1
+
+
+def test_downloader_file_size_limit_applied_after_filter(
+    file_all_connections,
+    source_path,
+    upload_test_files,
+    tmp_path_factory,
+):
+    local_path = tmp_path_factory.mktemp("local_path")
+
+    downloader = FileDownloader(
+        connection=file_all_connections,
+        source_path=source_path,
+        local_path=local_path,
+        filter=FileFilter(glob="*.csv"),
+        limit=FileLimit(size_limit=4 * 1024),
+    )
+
+    excluded = [
+        source_path / "exclude_dir/file_4.txt",
+        source_path / "exclude_dir/file_5.txt",
+        source_path / "news_parse_zp/exclude_dir/file_1.txt",
+        source_path / "news_parse_zp/exclude_dir/file_2.txt",
+        source_path / "news_parse_zp/exclude_dir/file_3.txt",
+    ]
+
+    download_result = downloader.run()
+
+    assert not download_result.failed
+    assert not download_result.skipped
+    assert not download_result.missing
+    assert download_result.successful
+
+    filtered = {
+        local_path / file.relative_to(source_path) for file in upload_test_files if os.fspath(file) not in excluded
+    }
+
+    # limit should be applied to files which satisfy the filter, not to all files in the source_path
+    assert download_result.successful.issubset(filtered)
+    assert len(download_result.successful) == 1
+    assert download_result.total_size <= 4 * 1024
 
 
 def test_downloader_detect_hwm_type_snap_batch_strategy(
