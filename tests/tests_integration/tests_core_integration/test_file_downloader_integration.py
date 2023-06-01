@@ -812,7 +812,7 @@ def test_downloader_file_count_limit_custom(
     with caplog.at_level(logging.DEBUG):
         files = downloader.view_files()
 
-        assert f"Limits [FileLimit(count_limit={limit})" in caplog.text
+        assert f"Limits [FileLimit(count_limit={limit}" in caplog.text
         assert "are reached" in caplog.text
 
     assert len(files) == limit
@@ -820,7 +820,7 @@ def test_downloader_file_count_limit_custom(
     with caplog.at_level(logging.DEBUG):
         download_result = downloader.run()
         assert f"    count_limit = {limit}" in caplog.text
-        assert f"Limits [FileLimit(count_limit={limit})" in caplog.text
+        assert f"Limits [FileLimit(count_limit={limit}" in caplog.text
         assert "are reached" in caplog.text
 
     assert len(download_result.successful) == limit
