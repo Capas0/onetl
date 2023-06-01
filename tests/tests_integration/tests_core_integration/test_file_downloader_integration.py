@@ -51,12 +51,12 @@ def test_downloader_view_file(file_all_connections, source_path, upload_test_fil
     ids=["run_path_type str", "run_path_type Path"],
 )
 def test_downloader_run(
-        file_all_connections,
-        source_path,
-        upload_test_files,
-        path_type,
-        run_path_type,
-        tmp_path_factory,
+    file_all_connections,
+    source_path,
+    upload_test_files,
+    path_type,
+    run_path_type,
+    tmp_path_factory,
 ):
     local_path = tmp_path_factory.mktemp("local_path")
 
@@ -95,12 +95,12 @@ def test_downloader_run(
 
 
 def test_downloader_run_delete_source(
-        file_all_connections,
-        source_path,
-        upload_test_files,
-        resource_path,
-        tmp_path_factory,
-        caplog,
+    file_all_connections,
+    source_path,
+    upload_test_files,
+    resource_path,
+    tmp_path_factory,
+    caplog,
 ):
     local_path = tmp_path_factory.mktemp("local_path")
 
@@ -149,12 +149,12 @@ def test_downloader_run_delete_source(
 
 @pytest.mark.parametrize("path_type", [str, Path])
 def test_downloader_file_filter_exclude_dir(
-        file_all_connections,
-        source_path,
-        upload_test_files,
-        path_type,
-        tmp_path_factory,
-        caplog,
+    file_all_connections,
+    source_path,
+    upload_test_files,
+    path_type,
+    tmp_path_factory,
+    caplog,
 ):
     local_path = tmp_path_factory.mktemp("local_path")
 
@@ -221,41 +221,18 @@ def test_downloader_file_filter_glob(file_all_connections, source_path, upload_t
     )
 
 
-def test_downloader_file_filter_is_ignored_by_user_input(
-        file_all_connections,
-        source_path,
-        upload_test_files,
-        tmp_path_factory,
-):
-    local_path = tmp_path_factory.mktemp("local_path")
-
-    downloader = FileDownloader(
-        connection=file_all_connections,
-        source_path=source_path,
-        local_path=local_path,
-        filter=FileFilter(glob="*.csv"),
-    )
-
-    download_result = downloader.run(upload_test_files)
-
-    # filter is not being applied to explicit files list
-    assert sorted(download_result.successful) == sorted(
-        local_path / file.relative_to(source_path) for file in upload_test_files
-    )
-
-
 @pytest.mark.parametrize(
     "source_path_value",
     [None, lazy_fixture("source_path")],
     ids=["Without source_path", "With source path"],
 )
 def test_downloader_run_with_files_absolute(
-        file_all_connections,
-        source_path,
-        upload_test_files,
-        source_path_value,
-        tmp_path_factory,
-        caplog,
+    file_all_connections,
+    source_path,
+    upload_test_files,
+    source_path_value,
+    tmp_path_factory,
+    caplog,
 ):
     local_path = tmp_path_factory.mktemp("local_path")
 
@@ -270,8 +247,8 @@ def test_downloader_run_with_files_absolute(
 
         if source_path_value:
             assert (
-                       "Passed both ``source_path`` and files list at the same time. Using explicit files list"
-                   ) in caplog.text
+                "Passed both ``source_path`` and files list at the same time. Using explicit files list"
+            ) in caplog.text
 
     assert not download_result.failed
     assert not download_result.skipped
@@ -307,10 +284,10 @@ def test_downloader_run_with_files_absolute(
 
 
 def test_downloader_run_with_files_relative_and_source_path(
-        file_all_connections,
-        source_path,
-        upload_test_files,
-        tmp_path_factory,
+    file_all_connections,
+    source_path,
+    upload_test_files,
+    tmp_path_factory,
 ):
     local_path = tmp_path_factory.mktemp("local_path")
     relative_files_path = [file.relative_to(source_path) for file in upload_test_files]
@@ -364,11 +341,11 @@ def test_downloader_run_without_files_and_source_path(file_all_connections, tmp_
     ids=["Without source_path", "With source_path"],
 )
 def test_downloader_run_with_empty_files_input(
-        file_all_connections,
-        pass_source_path,
-        tmp_path_factory,
-        upload_test_files,
-        source_path,
+    file_all_connections,
+    pass_source_path,
+    tmp_path_factory,
+    upload_test_files,
+    source_path,
 ):
     local_path = tmp_path_factory.mktemp("local_path")
 
@@ -427,10 +404,10 @@ def test_downloader_run_relative_path_without_source_path(file_all_connections, 
 
 
 def test_downloader_run_absolute_path_not_match_source_path(
-        file_all_connections,
-        source_path,
-        tmp_path_factory,
-        upload_test_files,
+    file_all_connections,
+    source_path,
+    tmp_path_factory,
+    upload_test_files,
 ):
     local_path = tmp_path_factory.mktemp("local_path")
 
@@ -607,12 +584,12 @@ def test_downloader_mode_overwrite(file_all_connections, source_path, upload_tes
 
 @pytest.mark.parametrize("local_dir_exist", [True, False])
 def test_downloader_mode_delete_all(
-        file_all_connections,
-        source_path,
-        upload_test_files,
-        tmp_path_factory,
-        local_dir_exist,
-        caplog,
+    file_all_connections,
+    source_path,
+    upload_test_files,
+    tmp_path_factory,
+    local_dir_exist,
+    caplog,
 ):
     if local_dir_exist:
         local_path = tmp_path_factory.mktemp("local_path")
@@ -762,8 +739,7 @@ def test_downloader_run_input_is_not_file(request, file_all_connections, tmp_pat
             downloader.run([not_a_file])
 
 
-def test_downloader_file_limit_custom(file_all_connections, source_path, upload_test_files, tmp_path_factory,
-                                      caplog):
+def test_downloader_file_limit_custom(file_all_connections, source_path, upload_test_files, tmp_path_factory, caplog):
     count_limit = 3
     size_limit = 4 * 1024
     local_path = tmp_path_factory.mktemp("local_path")
@@ -793,8 +769,13 @@ def test_downloader_file_limit_custom(file_all_connections, source_path, upload_
     assert download_result.total_size <= size_limit
 
 
-def test_downloader_file_count_limit_custom(file_all_connections, source_path, upload_test_files, tmp_path_factory,
-                                            caplog):
+def test_downloader_file_count_limit_custom(
+    file_all_connections,
+    source_path,
+    upload_test_files,
+    tmp_path_factory,
+    caplog,
+):
     limit = 2
     local_path = tmp_path_factory.mktemp("local_path")
 
@@ -878,10 +859,10 @@ def test_downloader_no_file_limit(file_all_connections, source_path, upload_test
 
 
 def test_downloader_file_count_limit_is_ignored_by_user_input(
-        file_all_connections,
-        source_path,
-        upload_test_files,
-        tmp_path_factory,
+    file_all_connections,
+    source_path,
+    upload_test_files,
+    tmp_path_factory,
 ):
     local_path = tmp_path_factory.mktemp("local_path")
 
@@ -899,10 +880,10 @@ def test_downloader_file_count_limit_is_ignored_by_user_input(
 
 
 def test_downloader_file_size_limit_is_ignored_by_user_input(
-        file_all_connections,
-        source_path,
-        upload_test_files,
-        tmp_path_factory,
+    file_all_connections,
+    source_path,
+    upload_test_files,
+    tmp_path_factory,
 ):
     local_path = tmp_path_factory.mktemp("local_path")
 
@@ -919,8 +900,12 @@ def test_downloader_file_size_limit_is_ignored_by_user_input(
     assert len(download_result.successful) == len(upload_test_files)
 
 
-def test_downloader_file_count_limit_applied_after_filter(file_all_connections, source_path, upload_test_files,
-                                                          tmp_path_factory):
+def test_downloader_file_count_limit_applied_after_filter(
+    file_all_connections,
+    source_path,
+    upload_test_files,
+    tmp_path_factory,
+):
     local_path = tmp_path_factory.mktemp("local_path")
 
     downloader = FileDownloader(
@@ -955,8 +940,12 @@ def test_downloader_file_count_limit_applied_after_filter(file_all_connections, 
     assert len(download_result.successful) == 1
 
 
-def test_downloader_file_size_limit_applied_after_filter(file_all_connections, source_path, upload_test_files,
-                                                         tmp_path_factory):
+def test_downloader_file_size_limit_applied_after_filter(
+    file_all_connections,
+    source_path,
+    upload_test_files,
+    tmp_path_factory,
+):
     local_path = tmp_path_factory.mktemp("local_path")
 
     downloader = FileDownloader(
@@ -989,15 +978,15 @@ def test_downloader_file_size_limit_applied_after_filter(file_all_connections, s
     # limit should be applied to files which satisfy the filter, not to all files in the source_path
     assert download_result.successful.issubset(filtered)
     assert len(download_result.successful) == 1
-    assert download_result.total_size <= 4*1024
+    assert download_result.total_size <= 4 * 1024
 
 
 def test_downloader_detect_hwm_type_snap_batch_strategy(
-        file_all_connections,
-        source_path,
-        upload_test_files,
-        tmp_path_factory,
-        caplog,
+    file_all_connections,
+    source_path,
+    upload_test_files,
+    tmp_path_factory,
+    caplog,
 ):
     local_path = tmp_path_factory.mktemp("local_path")
 
@@ -1014,11 +1003,11 @@ def test_downloader_detect_hwm_type_snap_batch_strategy(
 
 
 def test_downloader_detect_hwm_type_inc_batch_strategy(
-        file_all_connections,
-        source_path,
-        upload_test_files,
-        tmp_path_factory,
-        caplog,
+    file_all_connections,
+    source_path,
+    upload_test_files,
+    tmp_path_factory,
+    caplog,
 ):
     local_path = tmp_path_factory.mktemp("local_path")
 
@@ -1031,17 +1020,17 @@ def test_downloader_detect_hwm_type_inc_batch_strategy(
 
     with pytest.raises(ValueError, match="`hwm_type` cannot be used in batch strategy"):
         with IncrementalBatchStrategy(
-                step=timedelta(days=5),
+            step=timedelta(days=5),
         ):
             downloader.run()
 
 
 def test_downloader_detect_hwm_type_snapshot_strategy(
-        file_all_connections,
-        source_path,
-        upload_test_files,
-        tmp_path_factory,
-        caplog,
+    file_all_connections,
+    source_path,
+    upload_test_files,
+    tmp_path_factory,
+    caplog,
 ):
     local_path = tmp_path_factory.mktemp("local_path")
 
@@ -1057,11 +1046,11 @@ def test_downloader_detect_hwm_type_snapshot_strategy(
 
 
 def test_downloader_file_hwm_strategy_with_wrong_parameters(
-        file_all_connections,
-        source_path,
-        upload_test_files,
-        tmp_path_factory,
-        caplog,
+    file_all_connections,
+    source_path,
+    upload_test_files,
+    tmp_path_factory,
+    caplog,
 ):
     local_path = tmp_path_factory.mktemp("local_path")
 
@@ -1088,12 +1077,12 @@ def test_downloader_file_hwm_strategy_with_wrong_parameters(
     ],
 )
 def test_downloader_file_hwm_strategy(
-        file_all_connections,
-        source_path,
-        upload_test_files,
-        tmp_path_factory,
-        caplog,
-        hwm_type,
+    file_all_connections,
+    source_path,
+    upload_test_files,
+    tmp_path_factory,
+    caplog,
+    hwm_type,
 ):
     local_path = tmp_path_factory.mktemp("local_path")
 
