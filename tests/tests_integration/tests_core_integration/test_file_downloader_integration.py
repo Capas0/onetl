@@ -226,6 +226,29 @@ def test_downloader_file_filter_glob(file_all_connections, source_path, upload_t
     [None, lazy_fixture("source_path")],
     ids=["Without source_path", "With source path"],
 )
+def test_downloader_file_filter_is_ignored_by_user_input(
+    file_all_connections,
+    source_path,
+    upload_test_files,
+    tmp_path_factory,
+):
+    local_path = tmp_path_factory.mktemp("local_path")
+
+    downloader = FileDownloader(
+        connection=file_all_connections,
+        source_path=source_path,
+        local_path=local_path,
+        filter=FileFilter(glob="*.csv"),
+    )
+
+    download_result = downloader.run(upload_test_files)
+
+    # filter is not being applied to explicit files list
+    assert sorted(download_result.successful) == sorted(
+        local_path / file.relative_to(source_path) for file in upload_test_files
+    )
+
+
 def test_downloader_run_with_files_absolute(
     file_all_connections,
     source_path,
@@ -870,28 +893,7 @@ def test_downloader_file_count_limit_is_ignored_by_user_input(
         connection=file_all_connections,
         source_path=source_path,
         local_path=local_path,
-        limit=FileLimit(count_limit=2),
-    )
-
-    download_result = downloader.run(upload_test_files)
-
-    # limit is not being applied to explicit files list
-    assert len(download_result.successful) == len(upload_test_files)
-
-
-def test_downloader_file_size_limit_is_ignored_by_user_input(
-    file_all_connections,
-    source_path,
-    upload_test_files,
-    tmp_path_factory,
-):
-    local_path = tmp_path_factory.mktemp("local_path")
-
-    downloader = FileDownloader(
-        connection=file_all_connections,
-        source_path=source_path,
-        local_path=local_path,
-        limit=FileLimit(size_limit=2 * 1024),
+        limit=FileLimit(count_limit=2, size_limit=2 * 1024),
     )
 
     download_result = downloader.run(upload_test_files)
